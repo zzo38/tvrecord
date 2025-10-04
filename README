@@ -1,0 +1,50 @@
+This repository contains programs for recording audio and video streams
+from internet, including television shows and radio. All of these programs
+are written in C, and are written for the benefit of the viewers and the
+end users, rather than the benefit of businesses (although there is no
+restriction about how is allowed to use them, since they are FOSS).
+
+The following programs are available:
+
+* hlsrecord: Used for recording video streams from HLS.
+
+The supported M3U commands are currently:
+  #EXTINF
+  #EXT-X-PROGRAM-DATE-TIME
+  #EXT-X-MEDIA-SEQUENCE
+  #EXT-X-TARGETDURATION
+  #EXT-X-GAP
+  #EXT-X-PLAYLIST-TYPE
+  #EXT-X-CUE-OUT
+  #EXT-X-CUE-OUT-CONT
+  #EXT-X-CUE-IN
+  #EXT-X-ENDLIST
+
+Some features are not currently implemented, such as:
+
+* Formats and protocols other than HLS.
+
+* Dealing with master play lists.
+
+* Decrypting encrypted streams.
+
+* A more advanced dealing with SCTE-35.
+
+* Convert MPEG-TS to VOB (this should probably use other software).
+
+* Dealing with the framing of MPEG-TS, MP3, Ogg, etc, so that it can
+do such things as discarding frames before the first key frame, etc.
+
+* Scheduling for multi-user systems, that only one copy needs to be
+recorded if multiple users request the same recording.
+
+* Dealing with TV guide data (in multiple formats, including XML and DER).
+
+* Many other M3U commands which are not implemented yet.
+
+Some of these may be implemented in future, in some cases it will be in
+different programs that belong to the same repository, that the multiple
+programs may be used together when it is appropriate to do so. Some of
+the other things might be beyond the scope of this project, and would be
+done by separate programs instead.
+

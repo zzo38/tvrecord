@@ -1,0 +1,88 @@
+.TH HLSRECORD 1 2025-10-03
+.SH NAME
+hlsrecord \- Record HLS streams
+.SH SYNOPSIS
+.B "hlsrecord "
+.I "options"
+.SH OPTIONS
+Where an option is expected, you may also specify the name of a file with options.
+Any line in the file starting with - is treated as an option with the same syntax as the command-line.
+Lines in the file that do not start with - are ignored.
+.P
+Any options marked with * require an argument.
+.IP -H*
+Define a HTTP header to send with all HTTP requests made by this program.
+The format is the header name and then a colon and then the value.
+This option can occur any number of times, in order to define multiple HTTP request headers.
+.IP -I*
+Define a curl option whose type is a long integer.
+The format is the option number (see curl.h) and the value, with = in between.
+.IP -N*
+Define a curl option whose type is a pointer, and whose value is null.
+The format is the option number alone (see curl.h).
+.IP -P*
+Define a URL prefix.
+The program refuses to access any URLs that do not match this prefix.
+.IP -S*
+Define a curl option whose type is a string.
+The format is the option number followed by = and then the value.
+.IP -c
+Avoid downloading sections that are marked as "cue out".
+(Cue out is often used for commercial breaks, so this switch would effectively remove the commercials.)
+.IP -e*
+Define the end recording time in ISO 8601 format.
+(This time is specified using the server's clock rather than the client's clock, although the client's time zone is used.)
+.IP -l*
+Define the name of the log output file.
+If the file already exists, any new data is appended.
+.IP -m*
+Define the maximum total file size that can be downloaded and saved to disk.
+This is a decimal number, optionally followed by K (kilobytes), M (megabytes), or G (gigabytes).
+If no suffix is specified, then the measurement is bytes.
+Once it has downloaded and saved to disk this much in total, the program stops working.
+.IP -n*
+Define the maximum number of segments that may be handled at once.
+If the playlist file contains more segments than this, the rest are ignored.
+.IP -o*
+Define the name of the video output file.
+If the file already exists, any new data is appended.
+If this switch is not specified, then it uses measurement mode, which only downloads the M3U file once and writes the results of the measurement to stdout.
+.IP -q
+Avoid downloading any video segments.
+(This probably isn't very useful except for some kind of testing.)
+.IP -r*
+Define retrying in case of errors.
+This consists of three numbers with commas in between.
+The first is the initial retry time, the second is the maximum retry time, and the third is the maximum number of retries.
+All of these numbers must be nonnegative integers.
+Exponential backoff will then be used, including randomization, for deciding when to retry.
+.IP -s*
+Define the start recording time in ISO 8601 format.
+(This time is specified using the server's clock rather than the client's clock, although the client's time zone is used.)
+.IP -t*
+Set a timing parameter.
+This is followed by a letter, followed by the time interval in seconds (which may optionally include a fractional part).
+See the below section about timing parameters.
+.IP -u*
+Define the playlist URL (which must be an absolute URL supported by curl).
+This option must occur exactly once.
+.IP -v
+Causes log messages to be written to stderr.
+This cannot be effectively combined with the -l switch.
+.SH "TIMING PARAMETERS"
+Use the -t switch to set these timing parameters.
+.IP c
+Default cue out time, in case it cannot be determined by reading the M3U file.
+.IP p
+Amount of time preceding the beginning of the last downloaded segment or end of a commercial break before reloading the play list.
+If this is zero or unspecified, then the target duration is used instead.
+.IP w
+Minimum waiting time between reloading play lists.
+.IP x
+Maximum waiting time between reloading play lists.
+It will always wait for at least half of the target duration regardless of this parameter.
+.SH ENVIRONMENT
+.TP
+.B TZ
+The time zone to use for ISO 8601 specifications that lack a time zone specification.
+This includes user options as well as date/time specifications in the M3U file.
