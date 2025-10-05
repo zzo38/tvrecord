@@ -2,7 +2,7 @@ This repository contains programs for recording audio and video streams
 from internet, including television shows and radio. All of these programs
 are written in C, and are written for the benefit of the viewers and the
 end users, rather than the benefit of businesses (although there is no
-restriction about how is allowed to use them, since they are FOSS).
+restriction about who is allowed to use them, since they are FOSS).
 
 The following programs are available:
 
@@ -22,7 +22,11 @@ The supported M3U commands are currently:
 
 Some features are not currently implemented, such as:
 
-* Formats and protocols other than HLS.
+* Alternate formats of the #EXT-X-CUE-OUT and #EXT-X-CUE-OUT-CONT commands
+with attribute lists.
+
+* Formats and protocols other than HLS (e.g. RTSP, RTP, LAVP, HLS over
+Gemini, direct streams, etc).
 
 * Dealing with master play lists.
 

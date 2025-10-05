@@ -45,7 +45,7 @@ static FILE*video_out;
 static int base_retry_time,max_retry_time,max_retry_count,retry_count;
 static char nodownload;
 static struct timespec timing[26];
-static char commercial_skip;
+static char commercial_skip,want_range;
 
 static CURL*m3ucurl;
 static CURL*tscurl;
@@ -61,6 +61,7 @@ static struct timespec targetduration={.tv_sec=5,.tv_nsec=0};
 static struct timespec segtime,totalsegtime,lastsegtime;
 static uint64_t video_total=0;
 static time_t first_time,last_time;
+static uint64_t content_length,received_length;
 
 static char cueout_on;
 static struct timespec cueout_time;
@@ -264,9 +265,20 @@ static void affect_total(int64_t n) {
 
 static size_t video_writer_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
   video_total+=size*nmemb;
+  received_length+=size*nmemb;
   affect_total(size*nmemb);
   if(video_out) fwrite(ptr,size,nmemb,video_out);
   return size*nmemb;
+}
+
+static size_t video_header_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+  size_t n=15;
+  size*=nmemb;
+  if(!content_length && size>15 && !strncasecmp(ptr,"Content-Length:",15)) {
+    while(n<size && (ptr[n]==' ' || ptr[n]=='\t')) ++n;
+    while(n<size && ptr[n]>='0' && ptr[n]<='9') content_length=10LL*content_length+ptr[n++]-'0';
+  }
+  return size;
 }
 
 static void m3u_process_line(void) {
@@ -395,7 +407,10 @@ static void do_segment(const char*url) {
       errx(ERR_URL,"The required URL prefix does not match");
     }
   }
+  content_length=0; received_length=0;
   curl_easy_setopt(tscurl,CURLOPT_URL,url);
+  if(want_range) curl_easy_setopt(tscurl,CURLOPT_RANGE,(char*)0);
+  repeat:
   while(c=curl_easy_perform(tscurl)) {
     // This program should check if the error is known to be permanent, but it currently doesn't.
     int j=base_retry_time<<retry_count;
@@ -407,6 +422,15 @@ static void do_segment(const char*url) {
     }
     if(retry_count++==max_retry_count) errx(ERR_CURL,"Curl error %d: %s",c,curl_easy_strerror(c));
     if(nanosleep(&x,0) && errno!=EINTR) err(ERR_OTHERS,"Error with nanosleep");
+  }
+  if(want_range && received_length<content_length) {
+    //TODO: Scorpion range requests, which work differently from HTTP. (This also does not work with RTSP.)
+    char buf[64];
+    snprintf(buf,64,"%llu-%llu",(unsigned long long)received_length,(unsigned long long)(content_length-1));
+    curl_easy_setopt(tscurl,CURLOPT_RANGE,buf);
+    if(log_out) affect_total(fprintf(log_out,"TRY:%s\n",buf));
+    if(retry_count++==max_retry_count) errx(ERR_OTHERS,"Reached maximum retry count with range request");
+    goto repeat;
   }
   if(video_out) fflush(video_out);
 }
@@ -422,6 +446,12 @@ static void playlist_wait(void) {
     sub_timespec(timing+'p'-'a',&a);
     if(timing['x'-'a'].tv_sec>0) min_timespec(timing+'x'-'a',&a);
     max_timespec(&a,&t);
+    if(cueout_on && (timing['o'-'a'].tv_sec || timing['o'-'a'].tv_nsec)) {
+      a=cueout_time;
+      sub_timespec(timing+'o'-'a',&a);
+      if(timing['x'-'a'].tv_sec>0) min_timespec(timing+'x'-'a',&a);
+      max_timespec(&a,&t);
+    }
   }
   if(timing['w'-'a'].tv_sec || timing['w'-'a'].tv_nsec) max_timespec(timing+'w'-'a',&t);
   if(log_out) affect_total(fprintf(log_out,"WAI:%lld.%09ld\n",(long long)t.tv_sec,(long)t.tv_nsec));
@@ -431,7 +461,7 @@ static void playlist_wait(void) {
   if(read(timer1,&result,8)<=0 && nanosleep(&t,0)) err(ERR_OTHERS,"Cannot sleep");
 }
 
-#define OPTSTRING "H:I:N:P:S:ce:l:m:n:o:qr:s:t:u:v"
+#define OPTSTRING "H:I:N:P:S:ce:gl:m:n:o:qr:s:t:u:v"
 
 static void set_option(int c,const char*a) {
   uint64_t u,v;
@@ -483,12 +513,13 @@ static void set_option(int c,const char*a) {
       break;
     case 'c': commercial_skip=1; break;
     case 'e': endtime=iso8601_to_unix(a); break;
-    case 'l': log_out=fopen(optarg,"a"); if(!log_out) err(ERR_FILE,"Cannot open log file for appending"); setlinebuf(log_out); break;
+    case 'g': want_range=1; break;
+    case 'l': log_out=fopen(a,"a"); if(!log_out) err(ERR_FILE,"Cannot open log file for appending"); setlinebuf(log_out); break;
     case 'm': maxtotal=parse_file_size(a); break;
     case 'n': maxsegments=strtol(a,0,0); break;
-    case 'o': video_out=fopen(optarg,"a"); if(!video_out) err(ERR_FILE,"Cannot open video file for appending"); break;
+    case 'o': video_out=fopen(a,"a"); if(!video_out) err(ERR_FILE,"Cannot open video file for appending"); break;
     case 'q': nodownload=1; break;
-    case 'r': sscanf(optarg,"%d,%d,%d",&base_retry_time,&max_retry_time,&max_retry_count); break;
+    case 'r': sscanf(a,"%d,%d,%d",&base_retry_time,&max_retry_time,&max_retry_count); break;
     case 's': starttime=iso8601_to_unix(a); break;
     case 't': if(*a<'a' || *a>'z') errx(ERR_OPTION,"Improper switch"); parse_time_interval(a+1,timing+*a-'a'); break;
     case 'u': if(baseurl) err(ERR_OPTION,"Multiple specifications of base URL"); baseurl=strdup(a); if(!baseurl) err(ERR_MEMORY,"Allocation failed"); break;
@@ -517,6 +548,7 @@ int main(int argc,char**argv) {
   if(!tscurl) errx(ERR_CURL,"Error initializing curl");
   curl_easy_setopt(m3ucurl,CURLOPT_WRITEFUNCTION,m3u_writer_callback);
   curl_easy_setopt(tscurl,CURLOPT_WRITEFUNCTION,video_writer_callback);
+  if(want_range) curl_easy_setopt(tscurl,CURLOPT_HEADERFUNCTION,video_header_callback);
   curl_easy_setopt(m3ucurl,CURLOPT_SOCKOPTFUNCTION,m3u_sockopt_callback);
   curl_easy_setopt(m3ucurl,CURLOPT_URL,baseurl);
   srandom(begintime=time(0));

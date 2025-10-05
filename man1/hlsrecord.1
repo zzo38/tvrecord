@@ -22,7 +22,7 @@ Define a curl option whose type is a pointer, and whose value is null.
 The format is the option number alone (see curl.h).
 .IP -P*
 Define a URL prefix.
-The program refuses to access any URLs that do not match this prefix.
+The program refuses to access any URLs that do not match this prefix, other than the URL specified by the -u switch.
 .IP -S*
 Define a curl option whose type is a string.
 The format is the option number followed by = and then the value.
@@ -32,6 +32,9 @@ Avoid downloading sections that are marked as "cue out".
 .IP -e*
 Define the end recording time in ISO 8601 format.
 (This time is specified using the server's clock rather than the client's clock, although the client's time zone is used.)
+.IP -g
+Enable the use of range requests in case an incomplete download is interrupted.
+(This feature is not fully tested yet.)
 .IP -l*
 Define the name of the log output file.
 If the file already exists, any new data is appended.
@@ -73,8 +76,12 @@ This cannot be effectively combined with the -l switch.
 Use the -t switch to set these timing parameters.
 .IP c
 Default cue out time, in case it cannot be determined by reading the M3U file.
+.IP o
+Amount of time preceding the end of a commercial break before reloading the play list.
+This is only used if the previous play list ends during a commercial break.
+It will use the "p" timing parameter instead if that would specify a longer waiting time.
 .IP p
-Amount of time preceding the beginning of the last downloaded segment or end of a commercial break before reloading the play list.
+Amount of time preceding the beginning of the last downloaded segment before reloading the play list.
 If this is zero or unspecified, then the target duration is used instead.
 .IP w
 Minimum waiting time between reloading play lists.
