@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -o ~/bin/hlsrecord -fwrapv hlsrecord.c -lm -lrt `curl-config --cflags --libs`
+gcc -g -O0 -o ~/bin/hlsrecord -fwrapv hlsrecord.c -lm -lrt `curl-config --cflags --libs`
 exit
 #endif
 
@@ -45,7 +45,7 @@ static FILE*video_out;
 static int base_retry_time,max_retry_time,max_retry_count,retry_count;
 static char nodownload;
 static struct timespec timing[26];
-static char commercial_skip,want_range;
+static char commercial_skip,want_range,want_progress;
 
 static CURL*m3ucurl;
 static CURL*tscurl;
@@ -75,6 +75,14 @@ static int timer1,timer_flag;
 static struct timespec request_time;
 
 static const struct timespec zerotime={};
+
+static void show_progress(const char*id) {
+  // The "id" should consists of two characters
+  static uint8_t spin=0;
+  printf("\rhlsrecord: %c %s%c%c%c%c seq=%020llu vt=%020llu rec=%020llu nseg=%05u retry=%010d","|/-\\"[spin++&3],id
+   ,criteria?'^':'_',cueout_on?'C':'_',ended?'E':'_',ended_program?'P':'_'
+   ,(long long)seqnumber,(long long)video_total,(long long)received_length,nsegments,retry_count);
+}
 
 static void convert_url(const char*base,const char*rel,FILE*out) {
   char nofile=0;
@@ -268,6 +276,7 @@ static size_t video_writer_callback(char *ptr, size_t size, size_t nmemb, void *
   received_length+=size*nmemb;
   affect_total(size*nmemb);
   if(video_out) fwrite(ptr,size,nmemb,video_out);
+  if(want_progress) show_progress("v+");
   return size*nmemb;
 }
 
@@ -278,6 +287,7 @@ static size_t video_header_callback(char *ptr, size_t size, size_t nmemb, void *
     while(n<size && (ptr[n]==' ' || ptr[n]=='\t')) ++n;
     while(n<size && ptr[n]>='0' && ptr[n]<='9') content_length=10LL*content_length+ptr[n++]-'0';
   }
+  if(want_progress) show_progress("h+");
   return size;
 }
 
@@ -337,7 +347,7 @@ static void m3u_process_line(void) {
     // URL
     if(log_out) affect_total(fprintf(log_out,"SEQ:%llu,%llu,%llu,%d\n",(long long)firstseqnumber,(long long)seqnumber,(long long)lastseqnumber,criteria));
     if(cueout_on) {
-      affect_total(fprintf(log_out,"OUT:%lld.%09ld\n",(long long)cueout_time.tv_sec,(long)cueout_time.tv_nsec));
+      if(log_out) affect_total(fprintf(log_out,"OUT:%lld.%09ld\n",(long long)cueout_time.tv_sec,(long)cueout_time.tv_nsec));
       if(!cueout_time.tv_sec && !cueout_time.tv_nsec) cueout_on=0;
       sub_timespec(&segtime,&cueout_time);
       if(cueout_time.tv_sec<0) cueout_on=0;
@@ -370,6 +380,7 @@ static size_t m3u_writer_callback(char *ptr, size_t size, size_t nmemb, void *us
       m3uline[m3ulinepos++]=c;
     }
   }
+  if(want_progress) show_progress("m+");
   return size;
 }
 
@@ -411,6 +422,7 @@ static void do_segment(const char*url) {
   curl_easy_setopt(tscurl,CURLOPT_URL,url);
   if(want_range) curl_easy_setopt(tscurl,CURLOPT_RANGE,(char*)0);
   repeat:
+  if(want_progress) show_progress("v-");
   while(c=curl_easy_perform(tscurl)) {
     // This program should check if the error is known to be permanent, but it currently doesn't.
     int j=base_retry_time<<retry_count;
@@ -439,6 +451,7 @@ static void playlist_wait(void) {
   char result[8];
   struct timespec a,t;
   struct itimerspec it={};
+  if(want_progress) show_progress("t-");
   t=targetduration;
   if(seqnumber==lastseqnumber) half_timespec(&targetduration,&t);
   if(timing['p'-'a'].tv_sec || timing['p'-'a'].tv_nsec) {
@@ -461,7 +474,7 @@ static void playlist_wait(void) {
   if(read(timer1,&result,8)<=0 && nanosleep(&t,0)) err(ERR_OTHERS,"Cannot sleep");
 }
 
-#define OPTSTRING "H:I:N:P:S:ce:gl:m:n:o:qr:s:t:u:v"
+#define OPTSTRING "H:I:N:P:S:ce:gl:m:n:o:pqr:s:t:u:v"
 
 static void set_option(int c,const char*a) {
   uint64_t u,v;
@@ -518,6 +531,7 @@ static void set_option(int c,const char*a) {
     case 'm': maxtotal=parse_file_size(a); break;
     case 'n': maxsegments=strtol(a,0,0); break;
     case 'o': video_out=fopen(a,"a"); if(!video_out) err(ERR_FILE,"Cannot open video file for appending"); break;
+    case 'p': want_progress=1; setbuf(stdout,0); puts("\e]0;hlsrecord\a"); break;
     case 'q': nodownload=1; break;
     case 'r': sscanf(a,"%d,%d,%d",&base_retry_time,&max_retry_time,&max_retry_count); break;
     case 's': starttime=iso8601_to_unix(a); break;
@@ -557,6 +571,7 @@ int main(int argc,char**argv) {
     timer_flag=0;
     retry_count=0;
     m3u_reset();
+    if(want_progress) show_progress("m-");
     if(log_out) affect_total(fprintf(log_out,"GET:%lld,%s\n",(long long)time(0),baseurl));
     while(c=curl_easy_perform(m3ucurl)) {
       // This program should check if the error is known to be permanent, but it currently doesn't.
@@ -592,5 +607,6 @@ int main(int argc,char**argv) {
     printf("NUM_SEGMENTS=%u\n",nsegments);
     printf("BIT_RATE=%g\n",(8.0*video_total)/(double)(totalsegtime.tv_sec+totalsegtime.tv_nsec*1.0e-9));
   }
+  if(want_progress) show_progress("..");
   return 0;
 }
