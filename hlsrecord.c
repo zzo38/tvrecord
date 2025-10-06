@@ -327,7 +327,7 @@ static void m3u_process_line(void) {
       cueout_on=0;
       cueout_time=zerotime;
     } else if(!strcmp(m3uline+4,"-X-PLAYLIST-TYPE")) {
-      if(p && !strcmp(p,"VOD")) ended=1; else ended=0;
+      if(p && !strcmp(p,"VOD")) ended=1;
     } else if(!strcmp(m3uline+4,"-X-GAP")) {
       criteria=0;
     } else if(!strcmp(m3uline+4,"-X-ENDLIST")) {

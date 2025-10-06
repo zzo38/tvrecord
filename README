@@ -34,7 +34,10 @@ Gemini, direct streams, etc).
 
 * A more advanced dealing with SCTE-35.
 
-* Convert MPEG-TS to VOB (this should probably use other software).
+* Convert MPEG-TS to VOB. This is beyond the scope of this project; use
+ffmpeg instead, with "-target ntsc-dvd" (or "-target pal-dvd" if it is PAL
+instead of NTSC). You must then use program to make DVD video disc format,
+such as the dvdauthor program.
 
 * Dealing with the framing of MPEG-TS, MP3, Ogg, etc, so that it can
 do such things as discarding frames before the first key frame, etc.
@@ -45,6 +48,8 @@ recorded if multiple users request the same recording.
 * Dealing with TV guide data (in multiple formats, including XML and DER).
 
 * Many other M3U commands which are not implemented yet.
+
+* Extract EIA-608 captions. (This is planned, but not completed yet.)
 
 Some of these may be implemented in future, in some cases it will be in
 different programs that belong to the same repository, that the multiple
