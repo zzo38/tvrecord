@@ -51,6 +51,8 @@ recorded if multiple users request the same recording.
 
 * Extract EIA-608 captions. (This is planned, but not completed yet.)
 
+* Working with HLS files that do not include the date/time.
+
 Some of these may be implemented in future, in some cases it will be in
 different programs that belong to the same repository, that the multiple
 programs may be used together when it is appropriate to do so. Some of
