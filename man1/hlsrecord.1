@@ -1,4 +1,4 @@
-.TH HLSRECORD 1 2025-10-03
+.TH HLSRECORD 1 2026-05-14
 .SH NAME
 hlsrecord \- Record HLS streams
 .SH SYNOPSIS
@@ -17,6 +17,12 @@ This option can occur any number of times, in order to define multiple HTTP requ
 .IP -I*
 Define a curl option whose type is a long integer.
 The format is the option number (see curl.h) and the value, with = in between.
+.IP -K
+Forces the use of "http" instead of "https" if an absolute "https" URL is found where a relative URL is expected.
+.IP -M*
+Treat the playlist file as a master playlist instead of a media playlist.
+You must specify the parameters to select the appropriate variant stream.
+See the below section about selection of variant streams.
 .IP -N*
 Define a curl option whose type is a pointer, and whose value is null.
 The format is the option number alone (see curl.h).
@@ -29,12 +35,17 @@ The format is the option number followed by = and then the value.
 .IP -c
 Avoid downloading sections that are marked as "cue out".
 (Cue out is often used for commercial breaks, so this switch would effectively remove the commercials.)
+.IP -d
+Use the client's clock instead of the server's clock for the start and end recording times.
+(If using this option, then you should use an external program to set the start time instead of this one, although you can still set the end recording time using this one.)
+This should be used if the #EXT-X-PROGRAM-DATE-TIME command is not used by the service that you are trying to record.
 .IP -e*
 Define the end recording time in ISO 8601 format.
 (This time is specified using the server's clock rather than the client's clock, although the client's time zone is used.)
 .IP -g
 Enable the use of range requests in case an incomplete download is interrupted.
 (This feature is not fully tested yet.)
+(This is not required for #EXT-X-BYTERANGE, although #EXT-X-BYTERANGE is not implemented yet.)
 .IP -l*
 Define the name of the log output file.
 If the file already exists, any new data is appended.
@@ -91,6 +102,48 @@ Minimum waiting time between reloading play lists.
 .IP x
 Maximum waiting time between reloading play lists.
 It will always wait for at least half of the target duration regardless of this parameter.
+.SH "SELECTION OF VARIANT STREAMS"
+The selection of variant streams uses a -M switch for each criteria.
+The criteria consists of one of the below letters, followed by a comparison operator and then the value to be compared with (this may need to be quoted to prevent interpretation by the shell).
+.IP 0
+Causes it to only output the URL of the selected media playlist(s) to stdout, instead of recording the streams.
+No comparison operator and comparison value is needed.
+.IP A
+The average segment bit rate, in bits per second.
+.IP B
+The peak segment bit rate, in bits per second.
+.IP F
+The frame rate, in frames per second.
+.IP H
+The HDCP, which is 0 for no HDCP or 1 for type 0 HDCP.
+.IP c
+The codec string.
+The only valid comparison operator is equality.
+.IP x
+The video width, in pixels.
+.IP y
+The video height, in pixels.
+.P
+The following comparison operators are available:
+.IP =
+The value must be exactly equal; this can be either a number or a string, depending on the attribute being tested.
+.IP <
+The value must be less than the specified value, which must be a number (integer or floating point).
+If you use <= then it means less or equal; if it is floating point then it always means less or equal.
+.IP >
+The value must be greater than the specified value, which must be a number (integer or floating point).
+If you use >= then it means less or equal; if it is floating point then it always means greater or equal.
+.IP :
+The value must be in range; specify two values with a colon in between, being the minimum and maximum.
+.IP L
+Use the variant stream with the lowest value for this attribute if there is more than one match.
+You can optionally follow this by another comparison operator and value to be compared with.
+If there is more than one criteria with L or H, then the first one specified has priority.
+.IP H
+Use the variant stream with the highest value for this attribute if there is more than one match.
+You can optionally follow this by another comparison operator and value to be compared with.
+.P
+(Note: The selection of alternate renditions works differently, and is not implemented yet.)
 .SH ENVIRONMENT
 .TP
 .B TZ

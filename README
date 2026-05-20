@@ -10,15 +10,16 @@ The following programs are available:
 
 The supported M3U commands are currently:
   #EXTINF
-  #EXT-X-PROGRAM-DATE-TIME
-  #EXT-X-MEDIA-SEQUENCE
-  #EXT-X-TARGETDURATION
-  #EXT-X-GAP
-  #EXT-X-PLAYLIST-TYPE
+  #EXT-X-CUE-IN
   #EXT-X-CUE-OUT
   #EXT-X-CUE-OUT-CONT
-  #EXT-X-CUE-IN
   #EXT-X-ENDLIST
+  #EXT-X-GAP
+  #EXT-X-MEDIA-SEQUENCE
+  #EXT-X-PLAYLIST-TYPE
+  #EXT-X-PROGRAM-DATE-TIME
+  #EXT-X-STREAM-INF
+  #EXT-X-TARGETDURATION
 
 Some features are not currently implemented, such as:
 
@@ -27,10 +28,6 @@ with attribute lists.
 
 * Formats and protocols other than HLS (e.g. RTSP, RTP, LAVP, HLS over
 Gemini, direct streams, etc).
-
-* Dealing with master play lists.
-
-* Decrypting encrypted streams.
 
 * A more advanced dealing with SCTE-35.
 
@@ -49,9 +46,14 @@ recorded if multiple users request the same recording.
 
 * Many other M3U commands which are not implemented yet.
 
-* Extract EIA-608 captions. (This is planned, but not completed yet.)
+* Extract EIA-608 captions. (This is planned, but not completed yet. A
+program to render them might also be useful, in order to convert them to
+DVD subtitles for use of DVD players that do not decode EIA-608 and the
+use of conversion programs that do not support EIA-608.)
 
-* Working with HLS files that do not include the date/time.
+* Use of alternative renditions.
+
+* Full support for non-independent media segments.
 
 Some of these may be implemented in future, in some cases it will be in
 different programs that belong to the same repository, that the multiple
