@@ -15,6 +15,7 @@ The supported M3U commands are currently:
   #EXT-X-CUE-OUT-CONT
   #EXT-X-ENDLIST
   #EXT-X-GAP
+  #EXT-X-KEY
   #EXT-X-MEDIA-SEQUENCE
   #EXT-X-PLAYLIST-TYPE
   #EXT-X-PROGRAM-DATE-TIME
